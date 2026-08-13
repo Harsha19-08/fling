@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Fling — send it there</title>
+<meta name="description" content="Fling photos, videos, and files straight between devices. No accounts, no cloud storage, no server in the middle." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23212121%22/><path d=%22M22 47 L78 24 L58 76 L50 54 Z%22 fill=%22%23D0F246%22/><path d=%22M22 47 L50 54 L38 60 Z%22 fill=%22%23BFD1FF%22/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  :root {
+    --ink: #212121;
+    --ink-soft: #55574f;
+    --ink-faint: #8a8c82;
+    --lavender: #BFD1FF;
+    --lavender-deep: #93AAF5;
+    --lavender-pale: #EAF0FF;
+    --lime: #D0F246;
+    --lime-deep: #5C6512;
+    --lime-press: #BEDE2F;
+    --paper: #FAFAF6;
+    --surface: #FFFFFF;
+    --hairline: rgba(33,33,33,0.12);
+    --radius-xl: 32px;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 11px;
+    --shadow-card: 0 1px 2px rgba(33,33,33,0.04), 0 24px 48px -18px rgba(33,33,33,0.22);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .accent {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--lime-deep);
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 520px;
+    padding: 22px 18px 40px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px 20px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; }
+
+  .mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mark svg { width: 17px; height: 17px; }
+
+  .wordmark {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .wordmark .dot-i { color: var(--lime-deep); }
+
+  main { flex: 1; display: flex; flex-direction: column; }
+
+  /* ================= HERO (home screen) ================= */
+
+  .hero-frame {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--lavender);
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin-bottom: 18px;
+    isolation: isolate;
+  }
+
+  .hero-art {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    padding: 30px 24px 96px;
+  }
+
+  .hero-copy h1 {
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .hero-copy h1 .accent {
+    font-size: 1.02em;
+    display: block;
+  }
+
+  .hero-sub {
+    margin-top: 14px;
+    font-size: 14.5px;
+    color: var(--ink);
+    opacity: 0.72;
+    max-width: 280px;
+    line-height: 1.45;
+    font-weight: 500;
+  }
+
+  .hero-card {
+    position: relative;
+    z-index: 2;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    margin: 0 16px 16px;
+    padding: 20px 20px 18px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .hero-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    margin-bottom: 14px;
+  }
+
+  .choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .choice-card {
+    border-radius: var(--radius-md);
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.16s cubic-bezier(.2,.8,.2,1);
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    border: 1.5px solid var(--hairline);
+  }
+  .choice-card:active { transform: scale(0.96); }
+  .choice-card.receive { background: var(--lavender-pale); border-color: transparent; }
+  .choice-card.send { background: var(--paper); }
+
+  .choice-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ink);
+  }
+  .choice-icon svg { width: 16px; height: 16px; stroke: var(--lime); }
+
+  .choice-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; }
+  .choice-sub { font-size: 12px; color: var(--ink-faint); margin-top: 1px; font-weight: 500; line-height: 1.3; }
+
+  .trust-line {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    font-weight: 500;
+    padding: 4px 12px 6px;
+  }
+  .trust-line b { color: var(--ink); font-weight: 700; }
+
+  /* ================= Panels (waiting / connected states) ================= */
+
+  .panel {
+    background: var(--surface);
+    border: 1.5px solid var(--hairline);
+    border-radius: var(--radius-xl);
+    padding: 34px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: var(--shadow-card);
+  }
+
+  .beam-visual {
+    position: relative;
+    width: 128px; height: 128px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 22px;
+  }
+  .beam-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1.5px solid var(--lavender-deep);
+    animation: pulse 2.6s cubic-bezier(.2,.6,.4,1) infinite;
+  }
+  .beam-ring.r2 { animation-delay: 0.7s; }
+  .beam-ring.r3 { animation-delay: 1.4s; }
+  @keyframes pulse {
+    0% { transform: scale(0.55); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  .beam-core {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+  }
+  .beam-core svg { width: 24px; height: 24px; }
+  .beam-core.connected { background: var(--lime); }
+  .beam-core.connected svg { stroke: var(--ink); }
+
+  .status-label {
+    font-size: 14.5px; color: var(--ink-soft); font-weight: 500;
+    margin-bottom: 22px; text-align: center;
+  }
+
+  .code-pill {
+    display: inline-flex;
+    align-items: center;
+    background: var(--ink);
+    color: var(--lime);
+    border-radius: 980px;
+    padding: 14px 26px;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 20px;
+    font-family: "Inter", monospace;
+  }
+
+  #qr-canvas {
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1.5px var(--hairline);
+    margin-bottom: 8px;
+  }
+
+  .hint {
+    font-size: 12.5px; color: var(--ink-faint); text-align: center;
+    line-height: 1.5; margin-top: 6px; font-weight: 500;
+  }
+
+  /* ================= Code entry ================= */
+
+  .code-input-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .code-input-row input {
+    width: 50px; height: 62px; text-align: center;
+    font-size: 26px; font-weight: 800;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--hairline);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Inter", monospace;
+    text-transform: uppercase;
+  }
+  .code-input-row input:focus {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 4px var(--lavender);
+  }
+
+  /* ================= Buttons ================= */
+
+  .btn {
+    appearance: none; border: none; border-radius: 980px;
+    font-size: 15.5px; font-weight: 700;
+    padding: 15px 26px; cursor: pointer; width: 100%;
+    transition: transform 0.12s, background 0.15s, opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--lime); color: var(--ink); }
+  .btn-primary:hover { background: var(--lime-press); }
+  .btn-primary:disabled { background: #E5E5E0; color: var(--ink-faint); cursor: default; }
+  .btn-secondary { background: var(--paper); color: var(--ink); border: 1.5px solid var(--hairline); }
+  .btn-secondary:hover { background: var(--lavender-pale); }
+
+  .btn-row { display: flex; gap: 10px; width: 100%; margin-top: 8px; }
+
+  /* ================= Connected / transfer UI ================= */
+
+  .peer-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--ink);
+    background: var(--lime);
+    padding: 7px 14px; border-radius: 980px;
+    margin-bottom: 20px; font-weight: 700;
+  }
+  .peer-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+
+  .dropzone {
+    width: 100%;
+    border: 1.5px dashed var(--lavender-deep);
+    border-radius: var(--radius-lg);
+    padding: 36px 18px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 16px;
+    background: var(--lavender-pale);
+  }
+  .dropzone.drag { background: var(--lavender); border-color: var(--ink); }
+  .dropzone svg { width: 30px; height: 30px; margin-bottom: 10px; stroke: var(--ink); }
+  .dropzone strong { color: var(--ink); font-weight: 800; }
+
+  input[type=file] { display: none; }
+
+  .file-list { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+  .file-row {
+    background: var(--surface);
+    border: 1.5px solid var(--hairline);
+    border-radius: var(--radius-sm);
+    padding: 13px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .file-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: var(--lavender-pale);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .file-icon svg { width: 17px; height: 17px; stroke: var(--ink); }
+
+  .file-meta { flex: 1; min-width: 0; }
+  .file-name {
+    font-size: 13.5px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .file-sub { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; font-weight: 500; }
+
+  .progress-track { height: 4px; background: var(--lavender-pale); border-radius: 4px; overflow: hidden; margin-top: 7px; }
+  .progress-fill { height: 100%; background: var(--lime); width: 0%; transition: width 0.15s ease-out; border-radius: 4px; }
+  .file-row.done .progress-fill { background: var(--ink); }
+  .status-check { width: 20px; height: 20px; stroke: var(--ink); flex-shrink: 0; display: none; }
+  .file-row.done .status-check { display: block; }
+  .file-row.done .progress-track { display: none; }
+
+  /* ================= Modal ================= */
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(33,33,33,0.4);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; z-index: 50;
+    animation: fadein 0.18s ease;
+  }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px 22px;
+    width: 100%; max-width: 320px;
+    text-align: center;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4);
+  }
+  .modal-icon {
+    width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 14px;
+    background: var(--lime);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-icon svg { width: 24px; height: 24px; stroke: var(--ink); }
+  .modal h3 { font-size: 18px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .modal p { font-size: 14px; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.45; font-weight: 500; }
+  .modal .btn-row { margin-top: 0; }
+
+  footer.foot {
+    text-align: center; padding-top: 26px;
+    font-size: 11.5px; color: var(--ink-faint); font-weight: 500;
+  }
+
+  @media (prefers-reduced-motion: reduce) { .beam-ring { animation: none; opacity: 0.4; } }
+
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 380px) {
+    .hero-copy h1 { font-size: 34px; }
+    .code-pill { font-size: 28px; padding: 12px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M22 47 L78 24 L58 76 L50 54 Z" fill="#D0F246"/>
+          <path d="M22 47 L50 54 L38 60 Z" fill="#BFD1FF"/>
+        </svg>
+      </div>
+      <div class="wordmark">Fl<span class="dot-i">i</span>ng</div>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer class="foot">Files travel device‑to‑device. Nothing sits on a server.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const CHUNK_SIZE = 16 * 1024;
+  const PEER_PREFIX = "fling-room-";
+  const CODE_LEN = 4;
+  const CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+  const app = document.getElementById("app");
+
+  let peer = null;
+  let conn = null;
+  let role = null;
+  let incomingFiles = {};
+  let outgoingQueue = [];
+  let sendingActive = false;
+
+  const icons = {
+    receive: `<svg viewBox="0 0 24 24" fill="none" stroke="#D0F246" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>`,
+    send: `<svg viewBox="0 0 24 24" fill="none" stroke="#D0F246" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 5h16"/></svg>`,
+    beam: `<svg viewBox="0 0 24 24" fill="none" stroke="#D0F246" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22M4.9 4.9l2.3 2.3M16.8 16.8l2.3 2.3M19.1 4.9l-2.3 2.3M7.2 16.8l-2.3 2.3"/></svg>`,
+    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+    file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>`,
+    incoming: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>`,
+  };
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(0) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function randomCode() {
+    let s = "";
+    for (let i = 0; i < CODE_LEN; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    return s;
+  }
+
+  function qp(name) { return new URLSearchParams(location.search).get(name); }
+
+  // ================= SCREENS =================
+
+  function renderHome() {
+    role = null;
+    app.innerHTML = `
+      <div class="hero-frame">
+        <div class="hero-art">${heroArtSvg()}</div>
+        <div class="hero-copy">
+          <h1><span class="accent">Fling</span> it there.</h1>
+          <div class="hero-sub">Photos, videos, whole folders — straight from this device to the next one, no matter where they sit.</div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-title">Choose a side</div>
+          <div class="choice-grid">
+            <div class="choice-card receive" id="card-receive">
+              <div class="choice-icon">${icons.receive}</div>
+              <div>
+                <div class="choice-title">Receive</div>
+                <div class="choice-sub">Get a code to share</div>
+              </div>
+            </div>
+            <div class="choice-card send" id="card-send">
+              <div class="choice-icon">${icons.send}</div>
+              <div>
+                <div class="choice-title">Send</div>
+                <div class="choice-sub">Scan or type a code</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="trust-line">Works from <b>any phone or laptop</b> on the same network, or across networks entirely.</div>
+    `;
+    document.getElementById("card-receive").onclick = startReceiving;
+    document.getElementById("card-send").onclick = () => renderEnterCode();
+  }
+
+  function heroArtSvg() {
+    return `
+      <svg viewBox="0 0 520 360" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="position:absolute; inset:0;">
+        <defs>
+          <radialGradient id="g1" cx="72%" cy="12%" r="80%">
+            <stop offset="0%" stop-color="#DCE7FF"/>
+            <stop offset="100%" stop-color="#BFD1FF"/>
+          </radialGradient>
+        </defs>
+        <rect width="520" height="360" fill="url(#g1)"/>
+        <circle cx="460" cy="40" r="170" fill="#D0F246" opacity="0.5"/>
+        <path d="M355 30 L505 95 L430 205 Z" fill="#212121" opacity="0.88"/>
+      </svg>
+    `;
+  }
+
+  function renderWaitingRoom(code) {
+    app.innerHTML = `
+      <div class="panel">
+        <div class="beam-visual">
+          <div class="beam-ring r1"></div>
+          <div class="beam-ring r2"></div>
+          <div class="beam-ring r3"></div>
+          <div class="beam-core" id="beam-core">${icons.beam}</div>
+        </div>
+        <div class="status-label">Waiting for a device to connect…</div>
+        <div class="code-pill">${code}</div>
+        <canvas id="qr-canvas"></canvas>
+        <div class="hint">Scan with a phone camera,<br/>or type the code on the other device.</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+      </div>
+    `;
+    document.getElementById("cancel-btn").onclick = teardownAndGoHome;
+
+    const url = `${location.origin}${location.pathname}?code=${code}`;
+    QRCode.toCanvas(document.getElementById("qr-canvas"), url, {
+      width: 176,
+      margin: 1,
+      color: { dark: "#212121", light: "#00000000" },
+    });
+  }
+
+  function renderEnterCode(prefill) {
+    role = null;
+    app.innerHTML = `
+      <div style="padding: 6px 4px 18px;">
+        <h1 style="font-family:'Inter',sans-serif; font-weight:800; font-size:26px; letter-spacing:-0.02em; margin:0 0 6px;">Enter the code</h1>
+        <div style="font-size:14px; color:var(--ink-soft); font-weight:500;">Type the 4-character code shown on the receiving device.</div>
+      </div>
+      <div class="panel" style="padding:28px 20px;">
+        <div class="code-input-row" id="code-row">
+          ${Array.from({ length: CODE_LEN }).map((_, i) => `<input maxlength="1" inputmode="text" data-i="${i}" autocomplete="off" autocapitalize="characters" />`).join("")}
+        </div>
+        <button class="btn btn-primary" id="connect-btn" disabled>Connect</button>
+        <div id="connect-error" class="hint" style="color:#B3261E; display:none; margin-top:14px;"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="back-btn">Back</button>
+      </div>
+    `;
+    document.getElementById("back-btn").onclick = renderHome;
+
+    const inputs = Array.from(document.querySelectorAll("#code-row input"));
+    const connectBtn = document.getElementById("connect-btn");
+
+    function currentCode() { return inputs.map((i) => i.value).join("").toUpperCase(); }
+    function updateBtn() { connectBtn.disabled = currentCode().length !== CODE_LEN; }
+    inputs.forEach((inp, idx) => {
+      inp.addEventListener("input", () => {
+        inp.value = inp.value.toUpperCase().slice(-1);
+        if (inp.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+        updateBtn();
+      });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !inp.value && idx > 0) inputs[idx - 1].focus();
+      });
+    });
+
+    if (prefill) {
+      prefill.toUpperCase().slice(0, CODE_LEN).split("").forEach((ch, i) => { if (inputs[i]) inputs[i].value = ch; });
+      updateBtn();
+    }
+
+    connectBtn.onclick = () => startSending(currentCode());
+    setTimeout(() => inputs[prefill ? Math.min(prefill.length, CODE_LEN - 1) : 0].focus(), 50);
+  }
+
+  function renderConnectedShell(title) {
+    app.innerHTML = `
+      <div class="peer-badge"><span class="dot"></span>${title}</div>
+      <div id="connected-content"></div>
+      <div class="btn-row" style="margin-top:22px;">
+        <button class="btn btn-secondary" id="disconnect-btn">Disconnect</button>
+      </div>
+    `;
+    document.getElementById("disconnect-btn").onclick = teardownAndGoHome;
+  }
+
+  // ================= RECEIVER FLOW =================
+
+  function startReceiving() {
+    role = "receiver";
+    const code = randomCode();
+    renderWaitingRoom(code);
+
+    peer = new Peer(PEER_PREFIX + code, { debug: 0 });
+    peer.on("open", () => {
+      peer.on("connection", (c) => {
+        conn = c;
+        wireConnection();
+        conn.on("open", () => {
+          const core = document.getElementById("beam-core");
+          if (core) core.classList.add("connected");
+          renderReceiverConnected();
+        });
+      });
+    });
+    peer.on("error", (err) => showFatalError(err));
+  }
+
+  function renderReceiverConnected() {
+    renderConnectedShell("Connected");
+    document.getElementById("connected-content").innerHTML = `
+      <div class="hint" style="margin-top:4px; margin-bottom:18px;">Waiting to receive files. Keep this tab open.</div>
+      <div class="file-list" id="incoming-list"></div>
+    `;
+  }
+
+  // ================= SENDER FLOW =================
+
+  function startSending(code) {
+    const errBox = document.getElementById("connect-error");
+    role = "sender";
+    peer = new Peer({ debug: 0 });
+    peer.on("open", () => {
+      conn = peer.connect(PEER_PREFIX + code, { reliable: true });
+      wireConnection();
+      conn.on("open", () => renderSenderConnected());
+      setTimeout(() => {
+        if (conn && !conn.open) {
+          if (errBox) { errBox.style.display = "block"; errBox.textContent = "Couldn't find that code. Check it and try again."; }
+          peer.destroy();
+        }
+      }, 6000);
+    });
+    peer.on("error", () => {
+      if (errBox) { errBox.style.display = "block"; errBox.textContent = "Couldn't connect. Check the code and try again."; }
+    });
+  }
+
+  function renderSenderConnected() {
+    renderConnectedShell("Connected");
+    document.getElementById("connected-content").innerHTML = `
+      <div class="dropzone" id="dropzone">
+        ${icons.file}
+        <div><strong>Choose files</strong> or drop them here</div>
+      </div>
+      <input type="file" id="file-input" multiple />
+      <div class="file-list" id="outgoing-list"></div>
+    `;
+    const dz = document.getElementById("dropzone");
+    const fileInput = document.getElementById("file-input");
+    dz.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => queueFiles(Array.from(e.target.files));
+
+    ["dragenter", "dragover"].forEach((evt) => dz.addEventListener(evt, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
+    ["dragleave", "drop"].forEach((evt) => dz.addEventListener(evt, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
+    dz.addEventListener("drop", (e) => { queueFiles(Array.from(e.dataTransfer.files)); });
+  }
+
+  function queueFiles(files) {
+    const list = document.getElementById("outgoing-list");
+    files.forEach((file) => {
+      const id = crypto.randomUUID();
+      const row = document.createElement("div");
+      row.className = "file-row";
+      row.id = "row-" + id;
+      row.innerHTML = `
+        <div class="file-icon">${icons.file}</div>
+        <div class="file-meta">
+          <div class="file-name">${escapeHtml(file.name)}</div>
+          <div class="file-sub" id="sub-${id}">${fmtBytes(file.size)} · waiting for approval…</div>
+          <div class="progress-track"><div class="progress-fill" id="fill-${id}"></div></div>
+        </div>
+        <svg class="status-check" id="check-${id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      `;
+      list.appendChild(row);
+      outgoingQueue.push({ id, file });
+    });
+    processQueue();
+  }
+
+  function processQueue() {
+    if (sendingActive || outgoingQueue.length === 0) return;
+    const item = outgoingQueue.shift();
+    sendingActive = true;
+    sendFile(item.id, item.file).finally(() => { sendingActive = false; processQueue(); });
+  }
+
+  function sendFile(id, file) {
+    return new Promise((resolve) => {
+      conn.send({ kind: "meta", id, name: file.name, size: file.size, mime: file.type });
+      const onMessage = (msg) => {
+        if (msg && msg.kind === "decision" && msg.id === id) {
+          conn.off("data", onMessage);
+          if (!msg.accepted) { setSub(id, "Declined by the other device"); resolve(); return; }
+          streamFile(id, file).then(resolve);
+        }
+      };
+      conn.on("data", onMessage);
+    });
+  }
+
+  function streamFile(id, file) {
+    return new Promise((resolve) => {
+      const total = file.size;
+      let offset = 0;
+      const reader = new FileReader();
+
+      function sendNextChunk() {
+        if (offset >= total) {
+          conn.send({ kind: "done", id });
+          setSub(id, `${fmtBytes(total)} · sent`);
+          markDone(id);
+          resolve();
+          return;
+        }
+        const slice = file.slice(offset, offset + CHUNK_SIZE);
+        reader.onload = () => {
+          conn.send(reader.result);
+          offset += slice.size;
+          updateProgress(id, offset, total);
+          if (conn.dataChannel && conn.dataChannel.bufferedAmount > 4 * 1024 * 1024) {
+            conn.dataChannel.onbufferedamountlow = () => { conn.dataChannel.onbufferedamountlow = null; sendNextChunk(); };
+          } else {
+            sendNextChunk();
+          }
+        };
+        reader.readAsArrayBuffer(slice);
+      }
+      sendNextChunk();
+    });
+  }
+
+  function updateProgress(id, sent, total) {
+    const fill = document.getElementById("fill-" + id);
+    const sub = document.getElementById("sub-" + id);
+    if (fill) fill.style.width = Math.min(100, (sent / total) * 100) + "%";
+    if (sub) sub.textContent = `${fmtBytes(sent)} of ${fmtBytes(total)}`;
+  }
+  function setSub(id, text) { const sub = document.getElementById("sub-" + id); if (sub) sub.textContent = text; }
+  function markDone(id) { const row = document.getElementById("row-" + id); if (row) row.classList.add("done"); }
+
+  // ================= SHARED CONNECTION WIRING =================
+
+  function wireConnection() {
+    conn.on("data", handleIncomingData);
+    conn.on("close", () => { teardownAndGoHome("The other device disconnected."); });
+  }
+
+  function handleIncomingData(data) {
+    if (role !== "receiver") return;
+    if (data instanceof ArrayBuffer) {
+      const active = incomingFiles.__active;
+      if (!active) return;
+      const f = incomingFiles[active];
+      f.chunks.push(data);
+      f.received += data.byteLength;
+      updateProgress(active, f.received, f.size);
+      return;
+    }
+    if (data && data.kind === "meta") { promptIncoming(data); return; }
+    if (data && data.kind === "done") { finalizeIncoming(data.id); }
+  }
+
+  function promptIncoming(meta) {
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-icon">${icons.incoming}</div>
+        <h3>Incoming file</h3>
+        <p><strong>${escapeHtml(meta.name)}</strong><br/>${fmtBytes(meta.size)}</p>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="decline-btn">Decline</button>
+          <button class="btn btn-primary" id="accept-btn">Accept</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = () => overlay.remove();
+    document.getElementById("decline-btn").onclick = () => { conn.send({ kind: "decision", id: meta.id, accepted: false }); cleanup(); };
+    document.getElementById("accept-btn").onclick = () => {
+      incomingFiles[meta.id] = { name: meta.name, size: meta.size, mime: meta.mime, chunks: [], received: 0 };
+      incomingFiles.__active = meta.id;
+      addIncomingRow(meta.id, meta.name, meta.size);
+      conn.send({ kind: "decision", id: meta.id, accepted: true });
+      cleanup();
+    };
+  }
+
+  function addIncomingRow(id, name, size) {
+    const list = document.getElementById("incoming-list");
+    if (!list) return;
+    const row = document.createElement("div");
+    row.className = "file-row";
+    row.id = "row-" + id;
+    row.innerHTML = `
+      <div class="file-icon">${icons.file}</div>
+      <div class="file-meta">
+        <div class="file-name">${escapeHtml(name)}</div>
+        <div class="file-sub" id="sub-${id}">0 B of ${fmtBytes(size)}</div>
+        <div class="progress-track"><div class="progress-fill" id="fill-${id}"></div></div>
+      </div>
+      <svg class="status-check" id="check-${id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    `;
+    list.prepend(row);
+  }
+
+  function finalizeIncoming(id) {
+    const f = incomingFiles[id];
+    if (!f) return;
+    const blob = new Blob(f.chunks, { type: f.mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    setSub(id, `${fmtBytes(f.size)} · saved`);
+    markDone(id);
+    delete incomingFiles[id];
+    incomingFiles.__active = null;
+  }
+
+  // ================= UTIL =================
+
+  function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+  function showFatalError(err) {
+    console.error(err);
+    app.innerHTML = `
+      <div class="panel">
+        <div class="status-label" style="color:#B3261E;">Something went wrong connecting.<br/>Please try again.</div>
+        <button class="btn btn-primary" id="retry-btn" style="margin-top:14px;">Back to start</button>
+      </div>
+    `;
+    document.getElementById("retry-btn").onclick = renderHome;
+  }
+
+  function teardownAndGoHome() {
+    try { if (conn) conn.close(); if (peer) peer.destroy(); } catch (e) {}
+    conn = null; peer = null; incomingFiles = {}; outgoingQueue = []; sendingActive = false;
+    renderHome();
+  }
+
+  // ================= BOOT =================
+
+  const codeFromUrl = qp("code");
+  if (codeFromUrl) { renderEnterCode(codeFromUrl); } else { renderHome(); }
+})();
+</script>
+</body>
+</html>
