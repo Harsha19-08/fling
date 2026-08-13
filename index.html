@@ -3188,21 +3188,31 @@ var qrcode = function() {
 
   function startSending(code) {
     const errBox = document.getElementById("connect-error");
+    function showConnectError(text) {
+      if (errBox) { errBox.style.display = "block"; errBox.textContent = text; }
+    }
     role = "sender";
     peer = new Peer({ debug: 0 });
     peer.on("open", () => {
-      conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "none" });
+      try {
+        conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "raw" });
+      } catch (err) {
+        console.error("peer.connect() failed:", err);
+        showConnectError("Something went wrong starting the connection. Please try again.");
+        return;
+      }
       wireConnection();
       conn.on("open", () => renderSenderConnected());
       setTimeout(() => {
         if (conn && !conn.open) {
-          if (errBox) { errBox.style.display = "block"; errBox.textContent = "Couldn't find that code. Check it and try again."; }
+          showConnectError("Couldn't find that code. Check it and try again.");
           peer.destroy();
         }
       }, 6000);
     });
-    peer.on("error", () => {
-      if (errBox) { errBox.style.display = "block"; errBox.textContent = "Couldn't connect. Check the code and try again."; }
+    peer.on("error", (err) => {
+      console.error("Peer error:", err);
+      showConnectError("Couldn't connect. Check the code and try again.");
     });
   }
 
@@ -3283,7 +3293,7 @@ var qrcode = function() {
     while (offset < total) {
       const slice = file.slice(offset, offset + CHUNK_SIZE);
       const buf = await slice.arrayBuffer();
-      conn.send(buf); // serialization:"none" - sent raw, unmodified, on the wire
+      conn.send(buf); // serialization:"raw" - sent unmodified, on the wire
       offset += buf.byteLength;
       updateProgress(id, offset, total);
 
